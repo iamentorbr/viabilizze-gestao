@@ -3,87 +3,41 @@
 @tailwind utilities;
 
 :root {
-  --brand-primary: #F97316;
-  --brand-dark:    #111111;
-  --brand-mid:     #1C1C1C;
-  --brand-surface: #242424;
-  --brand-border:  #333333;
-  --brand-orange:  #F97316;
-  --brand-orange-hover: #EA6A00;
-  --text-primary:  #F5F5F5;
-  --text-muted:    #9CA3AF;
-  --text-dim:      #6B7280;
+  --brand-primary: #16a34a;
+  --brand-dark: #14532d;
+  --brand-light: #dcfce7;
+  --accent-gold: #C8A96E;
+  --sidebar-bg: #14532d;
+  --sidebar-text: #dcfce7;
 }
 
 * { box-sizing: border-box; }
-body { margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; background: #111111; color: #F5F5F5; }
 
-/* ── Cards ── */
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-inter), system-ui, sans-serif;
+}
+
+/* Sidebar */
+.sidebar {
+  background: var(--sidebar-bg);
+  color: var(--sidebar-text);
+}
+
+/* Cards */
 .card {
-  background: #1C1C1C;
-  border: 1px solid #2A2A2A;
-  border-radius: 12px;
-  padding: 20px;
+  @apply bg-white rounded-xl shadow-sm border border-gray-100 p-6;
 }
-.card-hover { transition: border-color .15s, box-shadow .15s; }
-.card-hover:hover { border-color: #F97316; box-shadow: 0 0 0 1px rgba(249,115,22,.15); }
 
-/* ── Badges ── */
-.badge-green  { @apply inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800; }
-.badge-yellow { @apply inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-amber-950 text-amber-400 border border-amber-800; }
-.badge-red    { @apply inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-red-950 text-red-400 border border-red-800; }
-.badge-blue   { @apply inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-950 text-blue-400 border border-blue-800; }
-.badge-gray   { @apply inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-zinc-800 text-zinc-400 border border-zinc-700; }
-.badge-orange { @apply inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-orange-950 text-orange-400 border border-orange-800; }
+/* Status badges */
+.badge-green   { @apply bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full; }
+.badge-yellow  { @apply bg-yellow-100 text-yellow-800 text-xs font-medium px-2.5 py-0.5 rounded-full; }
+.badge-red     { @apply bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded-full; }
+.badge-blue    { @apply bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full; }
+.badge-gray    { @apply bg-gray-100 text-gray-800 text-xs font-medium px-2.5 py-0.5 rounded-full; }
 
-/* ── Inputs ── */
-.input {
-  width: 100%;
-  background: #111111;
-  border: 1px solid #333333;
-  border-radius: 8px;
-  padding: 8px 12px;
-  font-size: 14px;
-  color: #F5F5F5;
-  outline: none;
-  transition: border-color .15s;
-}
-.input:focus { border-color: #F97316; }
-.input::placeholder { color: #6B7280; }
-
-select.input option { background: #1C1C1C; color: #F5F5F5; }
-
-/* ── Table ── */
-.vtable { width: 100%; border-collapse: collapse; font-size: 13px; }
-.vtable thead tr { background: #161616; border-bottom: 1px solid #2A2A2A; }
-.vtable thead th { padding: 10px 16px; text-align: left; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #9CA3AF; }
-.vtable tbody tr { border-bottom: 1px solid #222222; transition: background .1s; }
-.vtable tbody tr:hover { background: #222222; }
-.vtable tbody td { padding: 12px 16px; color: #D1D5DB; }
-.vtable tbody tr:last-child { border-bottom: none; }
-
-/* ── Modal backdrop ── */
-.modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.7); backdrop-filter: blur(4px); z-index: 50; display: flex; align-items: center; justify-content: center; padding: 16px; }
-.modal-box { background: #1C1C1C; border: 1px solid #333333; border-radius: 16px; width: 100%; max-width: 460px; padding: 28px; box-shadow: 0 20px 60px rgba(0,0,0,.6); }
-
-/* ── Btn ── */
-.btn-primary { display: inline-flex; align-items: center; gap: 6px; background: #F97316; color: #000; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 700; border: none; cursor: pointer; transition: background .15s; }
-.btn-primary:hover { background: #EA6A00; }
-.btn-ghost { display: inline-flex; align-items: center; gap: 6px; background: transparent; color: #9CA3AF; padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 500; border: 1px solid #333333; cursor: pointer; transition: all .15s; }
-.btn-ghost:hover { border-color: #555; color: #F5F5F5; }
-
-/* ── Scrollbar ── */
-::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: #111; }
-::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #F97316; }
-
-/* ── Spinner ── */
-.spinner { width: 28px; height: 28px; border: 3px solid #333; border-top-color: #F97316; border-radius: 50%; animation: spin .7s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
-
-/* ── Stat card accent ── */
-.stat-accent-orange { border-left: 3px solid #F97316; }
-.stat-accent-green  { border-left: 3px solid #10B981; }
-.stat-accent-red    { border-left: 3px solid #EF4444; }
-.stat-accent-blue   { border-left: 3px solid #3B82F6; }
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #f1f5f9; }
+::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 3px; }

@@ -1,18 +1,14 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
-import { Plus, FlaskConical } from 'lucide-react'
+import { supabase, type OrdemProducao } from '@/lib/supabase'
+import { Plus, FlaskConical, Search } from 'lucide-react'
 
-const STATUS: Record<string, { label: string; badge: string }> = {
+const statusConfig: Record<string, { label: string; badge: string }> = {
   PLANEJADA:    { label: 'Planejada',    badge: 'badge-blue' },
-  EM_ANDAMENTO: { label: 'Em Andamento', badge: 'badge-orange' },
+  EM_ANDAMENTO: { label: 'Em Andamento', badge: 'badge-yellow' },
   PAUSADA:      { label: 'Pausada',      badge: 'badge-gray' },
   CONCLUIDA:    { label: 'Concluída',    badge: 'badge-green' },
   CANCELADA:    { label: 'Cancelada',    badge: 'badge-red' },
-}
-
-const STAT_COLORS: Record<string, string> = {
-  PLANEJADA: '#3B82F6', EM_ANDAMENTO: '#F97316', CONCLUIDA: '#10B981', PAUSADA: '#6B7280'
 }
 
 export default function ProducaoClient() {
@@ -27,8 +23,10 @@ export default function ProducaoClient() {
   async function carregar() {
     setLoading(true)
     const { data } = await supabase.from('ordens_producao').select('*, produtos(nome)').order('criado_em', { ascending: false })
-    setOrdens(data ?? []); setLoading(false)
+    setOrdens(data ?? [])
+    setLoading(false)
   }
+
   useEffect(() => {
     carregar()
     supabase.from('produtos').select('id, nome').eq('ativo', true).then(({ data }) => setProdutos(data ?? []))
@@ -39,82 +37,79 @@ export default function ProducaoClient() {
     setSalvando(true)
     const numero = `OP-${new Date().getFullYear()}-${String(ordens.length + 1).padStart(3, '0')}`
     await supabase.from('ordens_producao').insert({ ...form, numero, quantidade_planejada: Number(form.quantidade_planejada), status: 'PLANEJADA' })
-    setModal(false); setForm({ produto_id: '', quantidade_planejada: '', unidade_medida: 'L', data_planejada: '', numero_lote: '', responsavel: '', observacoes: '' })
-    setSalvando(false); carregar()
+    setModal(false)
+    setForm({ produto_id: '', quantidade_planejada: '', unidade_medida: 'L', data_planejada: '', numero_lote: '', responsavel: '', observacoes: '' })
+    setSalvando(false)
+    carregar()
   }
 
   async function atualizarStatus(id: string, status: string) {
-    const up: any = { status }
-    if (status === 'EM_ANDAMENTO') up.data_inicio = new Date().toISOString()
-    if (status === 'CONCLUIDA')    up.data_fim = new Date().toISOString()
-    await supabase.from('ordens_producao').update(up).eq('id', id); carregar()
+    const updates: any = { status }
+    if (status === 'EM_ANDAMENTO') updates.data_inicio = new Date().toISOString()
+    if (status === 'CONCLUIDA') updates.data_fim = new Date().toISOString()
+    await supabase.from('ordens_producao').update(updates).eq('id', id)
+    carregar()
   }
 
   const filtradas = filtro === 'TODOS' ? ordens : ordens.filter(o => o.status === filtro)
 
   return (
     <div className="p-6 space-y-5">
-      {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {(['PLANEJADA','EM_ANDAMENTO','CONCLUIDA','PAUSADA'] as const).map(s => (
-          <div key={s} className="card card-hover cursor-pointer" style={{ borderLeft: `3px solid ${STAT_COLORS[s]}` }}
-            onClick={() => setFiltro(filtro === s ? 'TODOS' : s)}>
-            <p className="text-2xl font-black text-white">{ordens.filter(o=>o.status===s).length}</p>
-            <p className="text-xs mt-1" style={{ color: STAT_COLORS[s] }}>{STATUS[s].label}</p>
+          <div key={s} className="card text-center cursor-pointer hover:border-green-300 border border-transparent" onClick={() => setFiltro(s)}>
+            <p className={`text-2xl font-bold ${s==='PLANEJADA'?'text-blue-600':s==='EM_ANDAMENTO'?'text-yellow-500':s==='CONCLUIDA'?'text-green-600':'text-gray-500'}`}>
+              {ordens.filter(o=>o.status===s).length}
+            </p>
+            <p className="text-xs text-gray-500 mt-1">{statusConfig[s].label}</p>
           </div>
         ))}
       </div>
 
-      {/* Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex gap-1.5 flex-wrap">
+        <div className="flex gap-2 flex-wrap">
           {['TODOS','PLANEJADA','EM_ANDAMENTO','CONCLUIDA','PAUSADA'].map(f => (
-            <button key={f} onClick={() => setFiltro(f)}
-              className="px-3 py-1.5 text-xs font-semibold rounded-lg transition-all"
-              style={filtro===f
-                ? { background: '#F97316', color: '#000' }
-                : { background: '#1C1C1C', color: '#9CA3AF', border: '1px solid #2A2A2A' }}>
-              {f==='TODOS' ? 'Todos' : STATUS[f]?.label ?? f}
+            <button key={f} onClick={() => setFiltro(f)} className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${filtro===f?'bg-green-600 text-white':'bg-white text-gray-600 border border-gray-200 hover:border-green-400'}`}>
+              {f==='TODOS'?'Todos':statusConfig[f]?.label ?? f}
             </button>
           ))}
         </div>
-        <button onClick={() => setModal(true)} className="btn-primary text-xs">
-          <Plus size={14} /> Nova Ordem
+        <button onClick={() => setModal(true)} className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700">
+          <Plus size={16} /> Nova Ordem
         </button>
       </div>
 
-      {/* Tabela */}
-      <div className="card overflow-hidden" style={{ padding: 0 }}>
+      <div className="card overflow-hidden p-0">
         {loading ? (
-          <div className="flex justify-center py-12"><div className="spinner" /></div>
+          <div className="flex justify-center py-12"><div className="w-7 h-7 border-4 border-green-500 border-t-transparent rounded-full animate-spin" /></div>
         ) : filtradas.length === 0 ? (
-          <div className="text-center py-16" style={{ color: '#444' }}>
-            <FlaskConical size={36} className="mx-auto mb-3" />
+          <div className="text-center py-16 text-gray-400">
+            <FlaskConical size={40} className="mx-auto mb-3 opacity-40" />
             <p className="text-sm">Nenhuma ordem encontrada</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="vtable">
-              <thead><tr>
-                {['Número','Produto','Lote','Qtd. Planejada','Data','Status','Alterar Status'].map(h=>(
-                  <th key={h}>{h}</th>
-                ))}
-              </tr></thead>
-              <tbody>
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b border-gray-100">
+                <tr>{['Número','Produto','Lote','Qtd. Planejada','Data','Status','Ações'].map(h=>(
+                  <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{h}</th>
+                ))}</tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
                 {filtradas.map(o => {
-                  const sc = STATUS[o.status] ?? { label: o.status, badge: 'badge-gray' }
+                  const sc = statusConfig[o.status] ?? { label: o.status, badge: 'badge-gray' }
                   return (
-                    <tr key={o.id}>
-                      <td><span className="font-mono text-xs font-bold" style={{ color: '#F97316' }}>{o.numero}</span></td>
-                      <td className="font-semibold text-white">{o.produtos?.nome ?? '—'}</td>
-                      <td><span className="font-mono text-xs" style={{ color: '#6B7280' }}>{o.numero_lote ?? '—'}</span></td>
-                      <td className="text-white">{o.quantidade_planejada} {o.unidade_medida}</td>
-                      <td style={{ color: '#9CA3AF' }}>{o.data_planejada ? new Date(o.data_planejada).toLocaleDateString('pt-BR') : '—'}</td>
-                      <td><span className={sc.badge}>{sc.label}</span></td>
-                      <td>
+                    <tr key={o.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 font-mono text-xs font-medium text-green-700">{o.numero}</td>
+                      <td className="px-4 py-3 font-medium text-gray-800">{o.produtos?.nome ?? '—'}</td>
+                      <td className="px-4 py-3 text-gray-500 font-mono text-xs">{o.numero_lote ?? '—'}</td>
+                      <td className="px-4 py-3 text-gray-700">{o.quantidade_planejada} {o.unidade_medida}</td>
+                      <td className="px-4 py-3 text-gray-500 text-xs">{o.data_planejada ? new Date(o.data_planejada).toLocaleDateString('pt-BR') : '—'}</td>
+                      <td className="px-4 py-3"><span className={sc.badge}>{sc.label}</span></td>
+                      <td className="px-4 py-3">
                         <select value={o.status} onChange={e => atualizarStatus(o.id, e.target.value)}
-                          className="input text-xs" style={{ width: 'auto', padding: '4px 8px', height: 30 }}>
-                          {Object.entries(STATUS).map(([k,v]) => <option key={k} value={k}>{v.label}</option>)}
+                          className="text-xs border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-green-500">
+                          {Object.entries(statusConfig).map(([k,v]) => <option key={k} value={k}>{v.label}</option>)}
                         </select>
                       </td>
                     </tr>
@@ -126,38 +121,36 @@ export default function ProducaoClient() {
         )}
       </div>
 
-      {/* Modal */}
       {modal && (
-        <div className="modal-bg">
-          <div className="modal-box">
-            <div className="flex items-center gap-2 mb-5">
-              <span style={{ width: 3, height: 18, background: '#F97316', borderRadius: 2, display: 'inline-block' }} />
-              <h2 className="text-base font-black text-white">Nova Ordem de Produção</h2>
-            </div>
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+            <h2 className="text-lg font-bold text-gray-800 mb-4">Nova Ordem de Produção</h2>
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-semibold mb-1.5" style={{ color: '#9CA3AF' }}>Produto *</label>
-                <select value={form.produto_id} onChange={e => setForm(p=>({...p,produto_id:e.target.value}))} className="input select">
+                <label className="text-xs font-medium text-gray-600 block mb-1">Produto *</label>
+                <select value={form.produto_id} onChange={e => setForm(p=>({...p, produto_id: e.target.value}))}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
                   <option value="">Selecione o produto</option>
                   {produtos.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
                 </select>
               </div>
               {[
                 { key: 'quantidade_planejada', label: 'Quantidade Planejada *', type: 'number' },
-                { key: 'unidade_medida', label: 'Unidade (L, kg, un...)', type: 'text' },
+                { key: 'unidade_medida', label: 'Unidade de Medida', type: 'text' },
                 { key: 'data_planejada', label: 'Data Planejada', type: 'date' },
                 { key: 'numero_lote', label: 'Número do Lote', type: 'text' },
                 { key: 'responsavel', label: 'Responsável', type: 'text' },
               ].map(f => (
                 <div key={f.key}>
-                  <label className="block text-xs font-semibold mb-1.5" style={{ color: '#9CA3AF' }}>{f.label}</label>
-                  <input type={f.type} value={(form as any)[f.key]} onChange={e => setForm(p=>({...p,[f.key]:e.target.value}))} className="input" />
+                  <label className="text-xs font-medium text-gray-600 block mb-1">{f.label}</label>
+                  <input type={f.type} value={(form as any)[f.key]} onChange={e => setForm(p=>({...p,[f.key]:e.target.value}))}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
                 </div>
               ))}
             </div>
             <div className="flex gap-2 mt-5">
-              <button onClick={() => setModal(false)} className="btn-ghost flex-1 justify-center">Cancelar</button>
-              <button onClick={salvar} disabled={salvando} className="btn-primary flex-1 justify-center" style={{ opacity: salvando ? .6 : 1 }}>
+              <button onClick={() => setModal(false)} className="flex-1 border border-gray-200 text-gray-600 py-2 rounded-lg text-sm">Cancelar</button>
+              <button onClick={salvar} disabled={salvando} className="flex-1 bg-green-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-60">
                 {salvando ? 'Salvando...' : 'Criar Ordem'}
               </button>
             </div>
