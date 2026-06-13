@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { BarChart2, Clock, ChevronDown, ChevronUp, ShoppingCart } from 'lucide-react'
 
-export default function ClienteHistorico({ clienteId }: { clienteId: string }) {
+export default function ClienteHistorico({ clienteId, sabores }: { clienteId: string; sabores?: any[] }) {
   const [rodadas, setRodadas] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [expandida, setExpandida] = useState<string | null>(null)
