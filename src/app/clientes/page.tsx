@@ -3,20 +3,26 @@ import { useEffect, useState } from 'react'
 import AppLayout from '@/components/layout/AppLayout'
 import Header from '@/components/layout/Header'
 import { supabase, type Cliente } from '@/lib/supabase'
-import { Users, Plus, Mail, MapPin, Phone, Search, Trash2, Building2 } from 'lucide-react'
+import { Users, Plus, Mail, MapPin, Phone, Search, Trash2, Building2, ArrowRight, Beaker } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 
 export default function ClientesPage() {
+  const router = useRouter()
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [loading, setLoading] = useState(true)
   const [busca, setBusca] = useState('')
   const [modal, setModal] = useState(false)
   const [salvando, setSalvando] = useState(false)
-  const [form, setForm] = useState({ nome: '', email: '', telefone: '', contato_responsavel: '', cidade: '', estado: '', cnpj_cpf: '', observacoes: '' })
+  const [form, setForm] = useState({
+    nome: '', email: '', telefone: '', contato_responsavel: '',
+    cidade: '', estado: '', cnpj_cpf: '', observacoes: ''
+  })
 
   async function carregar() {
     setLoading(true)
     const { data } = await supabase.from('clientes').select('*').order('nome')
-    setClientes(data ?? []); setLoading(false)
+    setClientes(data ?? [])
+    setLoading(false)
   }
   useEffect(() => { carregar() }, [])
 
@@ -27,6 +33,7 @@ export default function ClientesPage() {
     setForm({ nome: '', email: '', telefone: '', contato_responsavel: '', cidade: '', estado: '', cnpj_cpf: '', observacoes: '' })
     setModal(false); setSalvando(false); carregar()
   }
+
   async function excluir(id: string) {
     if (!confirm('Excluir este cliente?')) return
     await supabase.from('clientes').delete().eq('id', id); carregar()
@@ -71,7 +78,9 @@ export default function ClientesPage() {
               <input value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar cliente..."
                 className="input pl-8 text-xs" style={{ height: 34, width: 200 }} />
             </div>
-            <button onClick={() => setModal(true)} className="btn-primary"><Plus size={14} /> Novo Cliente</button>
+            <button onClick={() => setModal(true)} className="btn-primary">
+              <Plus size={14} /> Novo Cliente
+            </button>
           </div>
         </div>
 
@@ -106,7 +115,7 @@ export default function ClientesPage() {
                   </div>
                   <h3 className="font-bold text-sm mb-0.5" style={{ color: '#1a1d23' }}>{c.nome}</h3>
                   {c.contato_responsavel && <p className="text-xs mb-3" style={{ color: '#9aa0a6' }}>{c.contato_responsavel}</p>}
-                  <div className="space-y-1.5 pt-3" style={{ borderTop: '1px solid #f0f2f5' }}>
+                  <div className="space-y-1.5 pb-3" style={{ borderBottom: '1px solid #f0f2f5' }}>
                     {c.email && <div className="flex items-center gap-2 text-xs" style={{ color: '#5f6368' }}>
                       <Mail size={11} style={{ color: '#F97316' }} />{c.email}
                     </div>}
@@ -117,12 +126,32 @@ export default function ClientesPage() {
                       <MapPin size={11} style={{ color: '#F97316' }} />{c.cidade}{c.estado ? ` — ${c.estado}` : ''}
                     </div>}
                   </div>
+
+                  {/* BOTÃO "ENTRAR NO SISTEMA" — o diferencial */}
+                  <button
+                    onClick={() => router.push(`/cliente/${c.id}`)}
+                    className="w-full mt-3 flex items-center justify-between px-4 py-2.5 rounded-xl font-semibold text-xs transition-all"
+                    style={{
+                      background: 'linear-gradient(135deg, #F97316 0%, #ea6a00 100%)',
+                      color: '#fff',
+                      boxShadow: '0 2px 8px rgba(249,115,22,0.25)',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.opacity = '0.9')}
+                    onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Beaker size={14} />
+                      <span>Entrar no Sistema do Cliente</span>
+                    </div>
+                    <ArrowRight size={14} />
+                  </button>
                 </div>
               )
             })}
           </div>
         )}
 
+        {/* Modal */}
         {modal && (
           <div className="modal-bg">
             <div className="modal-box">
@@ -132,7 +161,7 @@ export default function ClientesPage() {
                 </div>
                 <div>
                   <h2 className="text-base font-bold" style={{ color: '#1a1d23' }}>Novo Cliente</h2>
-                  <p className="text-xs" style={{ color: '#9aa0a6' }}>Preencha os dados do cliente</p>
+                  <p className="text-xs" style={{ color: '#9aa0a6' }}>Após criar, acesse o sistema para subir as formulações</p>
                 </div>
               </div>
               <div className="space-y-3">
@@ -150,11 +179,15 @@ export default function ClientesPage() {
                     <input value={(form as any)[f.key]} onChange={e => setForm(p=>({...p,[f.key]:e.target.value}))} className="input" />
                   </div>
                 ))}
+                <div>
+                  <label className="block text-xs font-semibold mb-1.5" style={{ color: '#5f6368' }}>Observações (setor, linha de produto...)</label>
+                  <textarea value={form.observacoes} onChange={e => setForm(p=>({...p,observacoes:e.target.value}))} rows={2} className="input resize-none" />
+                </div>
               </div>
               <div className="flex gap-2 mt-5">
                 <button onClick={() => setModal(false)} className="btn-ghost flex-1 justify-center">Cancelar</button>
                 <button onClick={salvar} disabled={salvando} className="btn-primary flex-1 justify-center">
-                  {salvando ? 'Salvando...' : 'Salvar Cliente'}
+                  {salvando ? 'Salvando...' : 'Criar Cliente'}
                 </button>
               </div>
             </div>
