@@ -1,0 +1,43 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --brand-primary: #16a34a;
+  --brand-dark: #14532d;
+  --brand-light: #dcfce7;
+  --accent-gold: #C8A96E;
+  --sidebar-bg: #14532d;
+  --sidebar-text: #dcfce7;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-inter), system-ui, sans-serif;
+}
+
+/* Sidebar */
+.sidebar {
+  background: var(--sidebar-bg);
+  color: var(--sidebar-text);
+}
+
+/* Cards */
+.card {
+  @apply bg-white rounded-xl shadow-sm border border-gray-100 p-6;
+}
+
+/* Status badges */
+.badge-green   { @apply bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full; }
+.badge-yellow  { @apply bg-yellow-100 text-yellow-800 text-xs font-medium px-2.5 py-0.5 rounded-full; }
+.badge-red     { @apply bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded-full; }
+.badge-blue    { @apply bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full; }
+.badge-gray    { @apply bg-gray-100 text-gray-800 text-xs font-medium px-2.5 py-0.5 rounded-full; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #f1f5f9; }
+::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 3px; }
