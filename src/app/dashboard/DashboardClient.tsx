@@ -1,213 +1,185 @@
 'use client'
+import { useEffect, useState } from 'react'
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis,
   CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell
 } from 'recharts'
-import {
-  FlaskConical, Package, ShoppingCart, Users,
-  TrendingUp, AlertTriangle, CheckCircle, Clock
-} from 'lucide-react'
-
-const producaoMes = [
-  { mes: 'Jan', litros: 1200 },
-  { mes: 'Fev', litros: 1800 },
-  { mes: 'Mar', litros: 1400 },
-  { mes: 'Abr', litros: 2100 },
-  { mes: 'Mai', litros: 1900 },
-  { mes: 'Jun', litros: 2400 },
-]
-
-const comprasMes = [
-  { mes: 'Jan', valor: 3200 },
-  { mes: 'Fev', valor: 4100 },
-  { mes: 'Mar', valor: 2800 },
-  { mes: 'Abr', valor: 5200 },
-  { mes: 'Mai', valor: 3900 },
-  { mes: 'Jun', valor: 4600 },
-]
-
-const estoqueStatus = [
-  { name: 'OK', value: 68, color: '#16a34a' },
-  { name: 'Atenção', value: 22, color: '#f59e0b' },
-  { name: 'Crítico', value: 10, color: '#ef4444' },
-]
-
-const kpis = [
-  {
-    label: 'Ordens de Produção',
-    value: '12',
-    sub: '3 em andamento',
-    icon: FlaskConical,
-    color: 'bg-green-50 text-green-600',
-    trend: '+2 esta semana',
-  },
-  {
-    label: 'Itens em Estoque',
-    value: '47',
-    sub: '5 abaixo do mínimo',
-    icon: Package,
-    color: 'bg-blue-50 text-blue-600',
-    trend: '⚠️ Verificar',
-  },
-  {
-    label: 'Pedidos de Compra',
-    value: '8',
-    sub: '2 aguardando entrega',
-    icon: ShoppingCart,
-    color: 'bg-amber-50 text-amber-600',
-    trend: 'R$ 12.400 em aberto',
-  },
-  {
-    label: 'Clientes Ativos',
-    value: '6',
-    sub: '1 novo este mês',
-    icon: Users,
-    color: 'bg-purple-50 text-purple-600',
-    trend: '+1 novo',
-  },
-]
-
-const tarefasRecentes = [
-  { titulo: 'Revisar ficha técnica - Kombucha Gengibre', status: 'PENDENTE', prioridade: 'ALTA' },
-  { titulo: 'Atualizar rótulo produto linha verão', status: 'EM_ANDAMENTO', prioridade: 'MEDIA' },
-  { titulo: 'Pedido de compra fornecedor BioInsumos', status: 'CONCLUIDA', prioridade: 'ALTA' },
-  { titulo: 'Inventário matérias-primas trimestral', status: 'PENDENTE', prioridade: 'URGENTE' },
-]
-
-const statusBadge: Record<string, string> = {
-  PENDENTE: 'badge-yellow',
-  EM_ANDAMENTO: 'badge-blue',
-  CONCLUIDA: 'badge-green',
-  CANCELADA: 'badge-gray',
-}
-
-const prioridadeBadge: Record<string, string> = {
-  BAIXA: 'badge-gray',
-  MEDIA: 'badge-blue',
-  ALTA: 'badge-yellow',
-  URGENTE: 'badge-red',
-}
+import { FlaskConical, Package, ShoppingCart, Users, CheckCircle, Clock, AlertTriangle, ArrowUpRight } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
 
 export default function DashboardClient() {
+  const [stats, setStats] = useState({ clientes: 0, ordens: 0, ordensAtivas: 0, pedidos: 0, itensEstoque: 0, itensCriticos: 0 })
+  const [tarefas, setTarefas] = useState<any[]>([])
+  const [estChart, setEstChart] = useState([
+    { name: 'OK', value: 0, color: '#10B981' },
+    { name: 'Atenção', value: 0, color: '#F59E0B' },
+    { name: 'Crítico', value: 0, color: '#EF4444' },
+  ])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function load() {
+      const [
+        { count: clientes },
+        { data: ordens },
+        { data: pedidos },
+        { data: ingredientes },
+        { data: tarefasData },
+      ] = await Promise.all([
+        supabase.from('clientes').select('*', { count: 'exact', head: true }).eq('ativo', true),
+        supabase.from('ordens_producao').select('status'),
+        supabase.from('pedidos_compra').select('status, valor_total'),
+        supabase.from('ingredientes').select('estoque_atual, estoque_minimo'),
+        supabase.from('tarefas').select('titulo, status, prioridade').order('criado_em', { ascending: false }).limit(5),
+      ])
+      const ordensAtivas = ordens?.filter(o => o.status === 'EM_ANDAMENTO').length ?? 0
+      const total = ingredientes?.length ?? 0
+      const criticos = ingredientes?.filter(i => i.estoque_atual <= i.estoque_minimo).length ?? 0
+      const atencao  = ingredientes?.filter(i => i.estoque_atual > i.estoque_minimo && i.estoque_atual <= i.estoque_minimo * 1.5).length ?? 0
+      setStats({ clientes: clientes ?? 0, ordens: ordens?.length ?? 0, ordensAtivas, pedidos: pedidos?.length ?? 0, itensEstoque: total, itensCriticos: criticos })
+      setTarefas(tarefasData ?? [])
+      setEstChart([
+        { name: 'OK', value: total - criticos - atencao, color: '#10B981' },
+        { name: 'Atenção', value: atencao, color: '#F59E0B' },
+        { name: 'Crítico', value: criticos, color: '#EF4444' },
+      ])
+      setLoading(false)
+    }
+    load()
+  }, [])
+
+  const kpis = [
+    { label: 'Ordens de Produção', value: stats.ordens, sub: `${stats.ordensAtivas} em andamento`, icon: FlaskConical, accent: '#F97316', bg: 'rgba(249,115,22,0.08)' },
+    { label: 'Itens no Estoque',   value: stats.itensEstoque, sub: `${stats.itensCriticos} abaixo do mínimo`, icon: Package, accent: '#3B82F6', bg: 'rgba(59,130,246,0.08)' },
+    { label: 'Pedidos de Compra',  value: stats.pedidos, sub: 'total cadastrados', icon: ShoppingCart, accent: '#F59E0B', bg: 'rgba(245,158,11,0.08)' },
+    { label: 'Clientes Ativos',    value: stats.clientes, sub: 'em carteira', icon: Users, accent: '#10B981', bg: 'rgba(16,185,129,0.08)' },
+  ]
+
+  const statusBadge: Record<string, string> = {
+    PENDENTE: 'badge-yellow', EM_ANDAMENTO: 'badge-blue', CONCLUIDA: 'badge-green', CANCELADA: 'badge-gray',
+  }
+
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload?.length) return (
+      <div style={{ background: '#1C1C1C', border: '1px solid #333', borderRadius: 8, padding: '8px 12px', fontSize: 12 }}>
+        <p style={{ color: '#9CA3AF', marginBottom: 2 }}>{label}</p>
+        {payload.map((p: any, i: number) => (
+          <p key={i} style={{ color: p.color, fontWeight: 700 }}>{p.name}: {p.value}</p>
+        ))}
+      </div>
+    )
+    return null
+  }
+
+  if (loading) return (
+    <div className="p-6 flex items-center justify-center h-72">
+      <div className="text-center">
+        <div className="spinner mx-auto mb-3" />
+        <p className="text-xs" style={{ color: '#6B7280' }}>Carregando dados...</p>
+      </div>
+    </div>
+  )
+
   return (
-    <div className="p-6 space-y-6">
-      {/* Boas vindas */}
-      <div className="bg-gradient-to-r from-green-700 to-green-600 rounded-xl p-5 text-white">
-        <p className="text-green-200 text-sm">Bem-vinda de volta,</p>
-        <h2 className="text-xl font-bold">Ana Paula Santos</h2>
-        <p className="text-green-200 text-sm mt-1">VIABILIZZE Consultoria — Setor Alimentício</p>
+    <div className="p-6 space-y-5">
+
+      {/* Banner de boas-vindas */}
+      <div className="rounded-xl px-6 py-5 flex items-center justify-between"
+        style={{ background: 'linear-gradient(135deg, #1A1A1A 0%, #1E1E1E 100%)', border: '1px solid #2A2A2A' }}>
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: '#F97316' }}>
+            Bem-vinda de volta
+          </p>
+          <h2 className="text-xl font-black text-white">Ana Paula Santos</h2>
+          <p className="text-xs mt-1" style={{ color: '#6B7280' }}>
+            VIABILIZZE · Assessoria Industrial · Alimentos & Bebidas
+          </p>
+        </div>
+        <div className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-lg"
+          style={{ background: 'rgba(249,115,22,0.1)', border: '1px solid rgba(249,115,22,0.2)' }}>
+          <span className="text-xs font-bold" style={{ color: '#F97316' }}>Sistema Ativo</span>
+          <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+        </div>
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {kpis.map((k) => (
-          <div key={k.label} className="card">
-            <div className="flex items-start justify-between mb-3">
-              <div className={`p-2 rounded-lg ${k.color}`}>
-                <k.icon size={20} />
+          <div key={k.label} className="card card-hover" style={{ position: 'relative', overflow: 'hidden' }}>
+            <div className="flex items-start justify-between mb-4">
+              <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: k.bg }}>
+                <k.icon size={18} style={{ color: k.accent }} />
               </div>
-              <span className="text-xs text-gray-400 text-right">{k.trend}</span>
+              <ArrowUpRight size={14} style={{ color: '#444' }} />
             </div>
-            <p className="text-2xl font-bold text-gray-800">{k.value}</p>
-            <p className="text-sm font-medium text-gray-600 mt-0.5">{k.label}</p>
-            <p className="text-xs text-gray-400 mt-1">{k.sub}</p>
+            <p className="text-2xl font-black text-white mb-0.5">{k.value}</p>
+            <p className="text-xs font-semibold text-white">{k.label}</p>
+            <p className="text-xs mt-1" style={{ color: '#6B7280' }}>{k.sub}</p>
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 rounded-b-xl" style={{ background: k.accent, opacity: 0.4 }} />
           </div>
         ))}
       </div>
 
       {/* Gráficos */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Produção */}
-        <div className="card">
-          <div className="flex items-center gap-2 mb-4">
-            <TrendingUp size={18} className="text-green-600" />
-            <h3 className="font-semibold text-gray-700">Produção — Litros/Mês</h3>
-          </div>
-          <ResponsiveContainer width="100%" height={200}>
-            <AreaChart data={producaoMes}>
-              <defs>
-                <linearGradient id="colorProd" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#16a34a" stopOpacity={0.2} />
-                  <stop offset="95%" stopColor="#16a34a" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="mes" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 12 }} />
-              <Tooltip />
-              <Area type="monotone" dataKey="litros" stroke="#16a34a" fill="url(#colorProd)" strokeWidth={2} />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Compras */}
-        <div className="card">
-          <div className="flex items-center gap-2 mb-4">
-            <ShoppingCart size={18} className="text-amber-600" />
-            <h3 className="font-semibold text-gray-700">Compras — R$/Mês</h3>
-          </div>
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={comprasMes}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="mes" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 12 }} />
-              <Tooltip formatter={(v) => `R$ ${Number(v).toLocaleString('pt-BR')}`} />
-              <Bar dataKey="valor" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* Estoque + Tarefas */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Estoque Pizza */}
+
+        {/* Estoque Donut */}
         <div className="card">
-          <div className="flex items-center gap-2 mb-4">
-            <Package size={18} className="text-blue-600" />
-            <h3 className="font-semibold text-gray-700">Status do Estoque</h3>
-          </div>
-          <ResponsiveContainer width="100%" height={160}>
-            <PieChart>
-              <Pie data={estoqueStatus} cx="50%" cy="50%" innerRadius={45} outerRadius={70} dataKey="value">
-                {estoqueStatus.map((e, i) => (
-                  <Cell key={i} fill={e.color} />
+          <p className="text-xs font-bold uppercase tracking-widest mb-4" style={{ color: '#9CA3AF' }}>Status do Estoque</p>
+          {stats.itensEstoque > 0 ? (
+            <>
+              <ResponsiveContainer width="100%" height={150}>
+                <PieChart>
+                  <Pie data={estChart} cx="50%" cy="50%" innerRadius={42} outerRadius={65} dataKey="value" strokeWidth={0}>
+                    {estChart.map((e, i) => <Cell key={i} fill={e.color} />)}
+                  </Pie>
+                  <Tooltip content={<CustomTooltip />} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="flex flex-col gap-1.5 mt-3">
+                {estChart.map(e => (
+                  <div key={e.name} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full" style={{ background: e.color }} />
+                      <span className="text-xs" style={{ color: '#9CA3AF' }}>{e.name}</span>
+                    </div>
+                    <span className="text-xs font-bold text-white">{e.value}</span>
+                  </div>
                 ))}
-              </Pie>
-              <Tooltip formatter={(v, n) => [`${v}%`, n]} />
-            </PieChart>
-          </ResponsiveContainer>
-          <div className="flex justify-center gap-4 mt-2">
-            {estoqueStatus.map((e) => (
-              <div key={e.name} className="flex items-center gap-1">
-                <span className="w-2.5 h-2.5 rounded-full" style={{ background: e.color }} />
-                <span className="text-xs text-gray-500">{e.name} ({e.value}%)</span>
               </div>
-            ))}
-          </div>
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-40" style={{ color: '#444' }}>
+              <Package size={32} className="mb-2" />
+              <p className="text-xs">Nenhum item cadastrado</p>
+            </div>
+          )}
         </div>
 
         {/* Tarefas recentes */}
         <div className="card lg:col-span-2">
-          <div className="flex items-center gap-2 mb-4">
-            <Clock size={18} className="text-purple-600" />
-            <h3 className="font-semibold text-gray-700">Tarefas Recentes</h3>
-          </div>
-          <div className="space-y-3">
-            {tarefasRecentes.map((t, i) => (
-              <div key={i} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                {t.status === 'CONCLUIDA'
-                  ? <CheckCircle size={16} className="text-green-500 shrink-0" />
-                  : t.prioridade === 'URGENTE'
-                  ? <AlertTriangle size={16} className="text-red-500 shrink-0" />
-                  : <Clock size={16} className="text-gray-400 shrink-0" />
-                }
-                <p className="text-sm text-gray-700 flex-1 leading-snug">{t.titulo}</p>
-                <div className="flex gap-1 shrink-0">
-                  <span className={statusBadge[t.status]}>{t.status.replace('_', ' ')}</span>
+          <p className="text-xs font-bold uppercase tracking-widest mb-4" style={{ color: '#9CA3AF' }}>Tarefas Recentes</p>
+          {tarefas.length > 0 ? (
+            <div className="space-y-2">
+              {tarefas.map((t, i) => (
+                <div key={i} className="flex items-center gap-3 px-3 py-2.5 rounded-lg"
+                  style={{ background: '#161616', border: '1px solid #222' }}>
+                  {t.status === 'CONCLUIDA'
+                    ? <CheckCircle size={15} style={{ color: '#10B981' }} className="shrink-0" />
+                    : t.prioridade === 'URGENTE'
+                    ? <AlertTriangle size={15} style={{ color: '#EF4444' }} className="shrink-0" />
+                    : <Clock size={15} style={{ color: '#6B7280' }} className="shrink-0" />}
+                  <p className="text-sm text-white flex-1 leading-snug">{t.titulo}</p>
+                  <span className={statusBadge[t.status] ?? 'badge-gray'}>{t.status.replace('_', ' ')}</span>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-40" style={{ color: '#444' }}>
+              <Clock size={32} className="mb-2" />
+              <p className="text-xs">Nenhuma tarefa cadastrada</p>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -1,110 +1,164 @@
 'use client'
-import { Package, AlertTriangle, TrendingDown, Plus } from 'lucide-react'
-
-const ingredientes = [
-  { codigo: 'ING-001', nome: 'Chá Preto Orgânico',   unidade: 'kg',  atual: 15.5, minimo: 5.0,  custo: 28.00,  status: 'OK' },
-  { codigo: 'ING-002', nome: 'Açúcar Mascavo',        unidade: 'kg',  atual: 3.2,  minimo: 5.0,  custo: 8.50,   status: 'CRITICO' },
-  { codigo: 'ING-003', nome: 'SCOBY Kombucha',        unidade: 'un',  atual: 8.0,  minimo: 3.0,  custo: 45.00,  status: 'OK' },
-  { codigo: 'ING-004', nome: 'Gengibre Fresco',       unidade: 'kg',  atual: 4.8,  minimo: 5.0,  custo: 12.00,  status: 'ATENCAO' },
-  { codigo: 'ING-005', nome: 'Limão Siciliano',       unidade: 'kg',  atual: 2.1,  minimo: 3.0,  custo: 18.00,  status: 'CRITICO' },
-  { codigo: 'ING-006', nome: 'Água Filtrada',         unidade: 'L',   atual: 200,  minimo: 50.0, custo: 0.50,   status: 'OK' },
-  { codigo: 'ING-007', nome: 'Maçã Fuji',             unidade: 'kg',  atual: 22.0, minimo: 10.0, custo: 6.80,   status: 'OK' },
-  { codigo: 'ING-008', nome: 'Beterraba',             unidade: 'kg',  atual: 5.5,  minimo: 8.0,  custo: 4.50,   status: 'ATENCAO' },
-]
-
-const statusConfig: Record<string, { label: string; badge: string; icon: React.ReactNode }> = {
-  OK:       { label: 'OK',      badge: 'badge-green',  icon: <Package size={13} /> },
-  ATENCAO:  { label: 'Atenção', badge: 'badge-yellow', icon: <AlertTriangle size={13} /> },
-  CRITICO:  { label: 'Crítico', badge: 'badge-red',    icon: <TrendingDown size={13} /> },
-}
+import { useEffect, useState } from 'react'
+import { supabase, type Ingrediente } from '@/lib/supabase'
+import { Package, AlertTriangle, Plus } from 'lucide-react'
 
 export default function EstoqueClient() {
-  const criticos = ingredientes.filter(i => i.status === 'CRITICO').length
-  const atencao  = ingredientes.filter(i => i.status === 'ATENCAO').length
-  const ok       = ingredientes.filter(i => i.status === 'OK').length
+  const [itens, setItens] = useState<Ingrediente[]>([])
+  const [loading, setLoading] = useState(true)
+  const [modal, setModal] = useState(false)
+  const [salvando, setSalvando] = useState(false)
+  const [form, setForm] = useState({ codigo: '', nome: '', unidade_medida: 'kg', estoque_atual: '', estoque_minimo: '', custo_unitario: '', fornecedor_principal: '' })
+
+  async function carregar() {
+    setLoading(true)
+    const { data } = await supabase.from('ingredientes').select('*').eq('ativo', true).order('nome')
+    setItens(data ?? []); setLoading(false)
+  }
+  useEffect(() => { carregar() }, [])
+
+  const getStatus = (i: Ingrediente) => {
+    if (i.estoque_atual <= i.estoque_minimo) return 'CRITICO'
+    if (i.estoque_atual <= i.estoque_minimo * 1.5) return 'ATENCAO'
+    return 'OK'
+  }
+
+  async function salvar() {
+    if (!form.nome.trim() || !form.codigo.trim()) return
+    setSalvando(true)
+    await supabase.from('ingredientes').insert({
+      ...form, ativo: true,
+      estoque_atual:  Number(form.estoque_atual)  || 0,
+      estoque_minimo: Number(form.estoque_minimo) || 0,
+      custo_unitario: Number(form.custo_unitario) || 0,
+    })
+    setModal(false)
+    setForm({ codigo: '', nome: '', unidade_medida: 'kg', estoque_atual: '', estoque_minimo: '', custo_unitario: '', fornecedor_principal: '' })
+    setSalvando(false); carregar()
+  }
+
+  async function atualizarEstoque(id: string, novo: number) {
+    await supabase.from('ingredientes').update({ estoque_atual: novo }).eq('id', id)
+    setItens(prev => prev.map(i => i.id === id ? { ...i, estoque_atual: novo } : i))
+  }
+
+  const criticos = itens.filter(i => getStatus(i) === 'CRITICO').length
+  const atencao  = itens.filter(i => getStatus(i) === 'ATENCAO').length
+  const ok       = itens.filter(i => getStatus(i) === 'OK').length
 
   return (
     <div className="p-6 space-y-5">
-      {/* Alertas */}
       {criticos > 0 && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3">
-          <AlertTriangle size={20} className="text-red-500 shrink-0" />
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl"
+          style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)' }}>
+          <AlertTriangle size={18} style={{ color: '#EF4444' }} className="shrink-0" />
           <div>
-            <p className="text-sm font-medium text-red-800">{criticos} item(ns) em nível crítico de estoque</p>
-            <p className="text-xs text-red-600">Realize pedidos de compra imediatamente para evitar paralisação da produção.</p>
+            <p className="text-sm font-bold" style={{ color: '#EF4444' }}>{criticos} item(ns) em nível crítico</p>
+            <p className="text-xs mt-0.5" style={{ color: '#9CA3AF' }}>Realize pedidos de compra imediatamente para evitar paralisação.</p>
           </div>
         </div>
       )}
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
-        <div className="card text-center border-l-4 border-green-500">
-          <p className="text-2xl font-bold text-green-600">{ok}</p>
-          <p className="text-xs text-gray-500 mt-1">Itens OK</p>
-        </div>
-        <div className="card text-center border-l-4 border-yellow-400">
-          <p className="text-2xl font-bold text-yellow-500">{atencao}</p>
-          <p className="text-xs text-gray-500 mt-1">Em Atenção</p>
-        </div>
-        <div className="card text-center border-l-4 border-red-500">
-          <p className="text-2xl font-bold text-red-500">{criticos}</p>
-          <p className="text-xs text-gray-500 mt-1">Críticos</p>
-        </div>
+        <div className="card stat-accent-green"><p className="text-2xl font-black text-white">{ok}</p><p className="text-xs mt-1" style={{color:'#10B981'}}>Itens OK</p></div>
+        <div className="card stat-accent-blue"><p className="text-2xl font-black text-white">{atencao}</p><p className="text-xs mt-1" style={{color:'#F59E0B'}}>Em Atenção</p></div>
+        <div className="card stat-accent-red"><p className="text-2xl font-black text-white">{criticos}</p><p className="text-xs mt-1" style={{color:'#EF4444'}}>Críticos</p></div>
       </div>
 
-      {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="font-semibold text-gray-700">Matérias-Primas e Ingredientes</h2>
-        <button className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700">
-          <Plus size={15} />
-          Novo Item
-        </button>
+        <h2 className="text-sm font-bold text-white uppercase tracking-wide">Matérias-Primas e Ingredientes</h2>
+        <button onClick={() => setModal(true)} className="btn-primary text-xs"><Plus size={14} /> Novo Item</button>
       </div>
 
-      {/* Tabela */}
-      <div className="card overflow-hidden p-0">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-100">
-              <tr>
-                {['Código','Nome','Unidade','Estoque Atual','Estoque Mínimo','% Disponível','Custo Unit.','Status'].map(h => (
-                  <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {ingredientes.map(i => {
-                const pct = Math.round((i.atual / (i.minimo * 2)) * 100)
-                const sc = statusConfig[i.status]
-                return (
-                  <tr key={i.codigo} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3 font-mono text-xs text-gray-500">{i.codigo}</td>
-                    <td className="px-4 py-3 font-medium text-gray-800">{i.nome}</td>
-                    <td className="px-4 py-3 text-gray-500">{i.unidade}</td>
-                    <td className="px-4 py-3 font-semibold text-gray-800">{i.atual} {i.unidade}</td>
-                    <td className="px-4 py-3 text-gray-500">{i.minimo} {i.unidade}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <div className="w-16 bg-gray-200 rounded-full h-1.5">
-                          <div
-                            className={`h-1.5 rounded-full ${i.status==='OK'?'bg-green-500':i.status==='ATENCAO'?'bg-yellow-400':'bg-red-500'}`}
-                            style={{ width: `${Math.min(pct,100)}%` }}
-                          />
+      <div className="card overflow-hidden" style={{ padding: 0 }}>
+        {loading ? (
+          <div className="flex justify-center py-12"><div className="spinner" /></div>
+        ) : itens.length === 0 ? (
+          <div className="text-center py-16" style={{ color: '#444' }}>
+            <Package size={36} className="mx-auto mb-3" />
+            <p className="text-sm">Nenhum ingrediente cadastrado</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="vtable">
+              <thead><tr>
+                {['Código','Nome','Un.','Estoque Atual','Mínimo','Nível','Custo Unit.','Status'].map(h=><th key={h}>{h}</th>)}
+              </tr></thead>
+              <tbody>
+                {itens.map(i => {
+                  const st = getStatus(i)
+                  const pct = i.estoque_minimo > 0 ? Math.min(Math.round((i.estoque_atual / (i.estoque_minimo * 2)) * 100), 100) : 100
+                  const barColor = st==='OK' ? '#10B981' : st==='ATENCAO' ? '#F59E0B' : '#EF4444'
+                  return (
+                    <tr key={i.id}>
+                      <td><span className="font-mono text-xs" style={{ color: '#6B7280' }}>{i.codigo}</span></td>
+                      <td className="font-semibold text-white">{i.nome}</td>
+                      <td style={{ color: '#9CA3AF' }}>{i.unidade_medida}</td>
+                      <td>
+                        <div className="flex items-center gap-2">
+                          <input type="number" step="0.1" defaultValue={i.estoque_atual}
+                            onBlur={e => { const v = parseFloat(e.target.value); if (!isNaN(v) && v !== i.estoque_atual) atualizarEstoque(i.id, v) }}
+                            className="input text-xs" style={{ width: 70, padding: '3px 8px', height: 28 }} />
+                          <span className="text-xs" style={{ color: '#6B7280' }}>{i.unidade_medida}</span>
                         </div>
-                        <span className="text-xs text-gray-500">{Math.min(pct,100)}%</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-gray-700">R$ {i.custo.toFixed(2)}</td>
-                    <td className="px-4 py-3">
-                      <span className={sc.badge}>{sc.label}</span>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
+                      </td>
+                      <td style={{ color: '#9CA3AF' }}>{i.estoque_minimo} {i.unidade_medida}</td>
+                      <td>
+                        <div className="flex items-center gap-2">
+                          <div className="w-16 rounded-full h-1.5" style={{ background: '#333' }}>
+                            <div className="h-1.5 rounded-full transition-all" style={{ width: `${pct}%`, background: barColor }} />
+                          </div>
+                          <span className="text-xs" style={{ color: '#6B7280' }}>{pct}%</span>
+                        </div>
+                      </td>
+                      <td className="text-white">R$ {Number(i.custo_unitario).toFixed(2)}</td>
+                      <td>
+                        <span className={st==='OK'?'badge-green':st==='ATENCAO'?'badge-yellow':'badge-red'}>
+                          {st==='OK'?'OK':st==='ATENCAO'?'Atenção':'Crítico'}
+                        </span>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
+
+      {modal && (
+        <div className="modal-bg">
+          <div className="modal-box">
+            <div className="flex items-center gap-2 mb-5">
+              <span style={{ width: 3, height: 18, background: '#F97316', borderRadius: 2, display: 'inline-block' }} />
+              <h2 className="text-base font-black text-white">Novo Ingrediente</h2>
+            </div>
+            <div className="space-y-3">
+              {[
+                { key: 'codigo', label: 'Código *', type: 'text' },
+                { key: 'nome', label: 'Nome *', type: 'text' },
+                { key: 'unidade_medida', label: 'Unidade (kg, L, un...)', type: 'text' },
+                { key: 'estoque_atual', label: 'Estoque Atual', type: 'number' },
+                { key: 'estoque_minimo', label: 'Estoque Mínimo', type: 'number' },
+                { key: 'custo_unitario', label: 'Custo Unitário (R$)', type: 'number' },
+                { key: 'fornecedor_principal', label: 'Fornecedor Principal', type: 'text' },
+              ].map(f => (
+                <div key={f.key}>
+                  <label className="block text-xs font-semibold mb-1.5" style={{ color: '#9CA3AF' }}>{f.label}</label>
+                  <input type={f.type} value={(form as any)[f.key]} onChange={e => setForm(p=>({...p,[f.key]:e.target.value}))} className="input" />
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2 mt-5">
+              <button onClick={() => setModal(false)} className="btn-ghost flex-1 justify-center">Cancelar</button>
+              <button onClick={salvar} disabled={salvando} className="btn-primary flex-1 justify-center" style={{ opacity: salvando ? .6 : 1 }}>
+                {salvando ? 'Salvando...' : 'Salvar Item'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -1,24 +1,54 @@
 'use client'
-import { useState } from 'react'
-import { Plus, FlaskConical, Play, Pause, CheckCircle, XCircle, Filter } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { supabase } from '@/lib/supabase'
+import { Plus, FlaskConical } from 'lucide-react'
 
-const ordens = [
-  { numero: 'OP-2026-001', produto: 'Kombucha Gengibre 500ml', lote: 'L2026001', qtd: 200, unidade: 'L', status: 'EM_ANDAMENTO', data: '2026-05-20', responsavel: 'Ana Paula' },
-  { numero: 'OP-2026-002', produto: 'Kefir Natural 1L',        lote: 'L2026002', qtd: 100, unidade: 'L', status: 'PLANEJADA',   data: '2026-05-25', responsavel: 'Ana Paula' },
-  { numero: 'OP-2026-003', produto: 'Vinagre de Maçã 250ml',   lote: 'L2026003', qtd: 300, unidade: 'L', status: 'CONCLUIDA',   data: '2026-05-15', responsavel: 'Ana Paula' },
-  { numero: 'OP-2026-004', produto: 'Fermentado de Beterraba',  lote: 'L2026004', qtd: 150, unidade: 'L', status: 'PAUSADA',    data: '2026-05-18', responsavel: 'Ana Paula' },
-]
+const STATUS: Record<string, { label: string; badge: string }> = {
+  PLANEJADA:    { label: 'Planejada',    badge: 'badge-blue' },
+  EM_ANDAMENTO: { label: 'Em Andamento', badge: 'badge-orange' },
+  PAUSADA:      { label: 'Pausada',      badge: 'badge-gray' },
+  CONCLUIDA:    { label: 'Concluída',    badge: 'badge-green' },
+  CANCELADA:    { label: 'Cancelada',    badge: 'badge-red' },
+}
 
-const statusConfig: Record<string, { label: string; badge: string; icon: React.ReactNode }> = {
-  PLANEJADA:    { label: 'Planejada',    badge: 'badge-blue',   icon: <FlaskConical size={14} /> },
-  EM_ANDAMENTO: { label: 'Em Andamento', badge: 'badge-yellow', icon: <Play size={14} /> },
-  PAUSADA:      { label: 'Pausada',      badge: 'badge-gray',   icon: <Pause size={14} /> },
-  CONCLUIDA:    { label: 'Concluída',    badge: 'badge-green',  icon: <CheckCircle size={14} /> },
-  CANCELADA:    { label: 'Cancelada',    badge: 'badge-red',    icon: <XCircle size={14} /> },
+const STAT_COLORS: Record<string, string> = {
+  PLANEJADA: '#3B82F6', EM_ANDAMENTO: '#F97316', CONCLUIDA: '#10B981', PAUSADA: '#6B7280'
 }
 
 export default function ProducaoClient() {
+  const [ordens, setOrdens] = useState<any[]>([])
+  const [produtos, setProdutos] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
   const [filtro, setFiltro] = useState('TODOS')
+  const [modal, setModal] = useState(false)
+  const [salvando, setSalvando] = useState(false)
+  const [form, setForm] = useState({ produto_id: '', quantidade_planejada: '', unidade_medida: 'L', data_planejada: '', numero_lote: '', responsavel: '', observacoes: '' })
+
+  async function carregar() {
+    setLoading(true)
+    const { data } = await supabase.from('ordens_producao').select('*, produtos(nome)').order('criado_em', { ascending: false })
+    setOrdens(data ?? []); setLoading(false)
+  }
+  useEffect(() => {
+    carregar()
+    supabase.from('produtos').select('id, nome').eq('ativo', true).then(({ data }) => setProdutos(data ?? []))
+  }, [])
+
+  async function salvar() {
+    if (!form.produto_id || !form.quantidade_planejada) return
+    setSalvando(true)
+    const numero = `OP-${new Date().getFullYear()}-${String(ordens.length + 1).padStart(3, '0')}`
+    await supabase.from('ordens_producao').insert({ ...form, numero, quantidade_planejada: Number(form.quantidade_planejada), status: 'PLANEJADA' })
+    setModal(false); setForm({ produto_id: '', quantidade_planejada: '', unidade_medida: 'L', data_planejada: '', numero_lote: '', responsavel: '', observacoes: '' })
+    setSalvando(false); carregar()
+  }
+
+  async function atualizarStatus(id: string, status: string) {
+    const up: any = { status }
+    if (status === 'EM_ANDAMENTO') up.data_inicio = new Date().toISOString()
+    if (status === 'CONCLUIDA')    up.data_fim = new Date().toISOString()
+    await supabase.from('ordens_producao').update(up).eq('id', id); carregar()
+  }
 
   const filtradas = filtro === 'TODOS' ? ordens : ordens.filter(o => o.status === filtro)
 
@@ -26,80 +56,114 @@ export default function ProducaoClient() {
     <div className="p-6 space-y-5">
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {[
-          { label: 'Planejadas',    count: ordens.filter(o=>o.status==='PLANEJADA').length,    color: 'text-blue-600' },
-          { label: 'Em Andamento',  count: ordens.filter(o=>o.status==='EM_ANDAMENTO').length, color: 'text-yellow-600' },
-          { label: 'Concluídas',    count: ordens.filter(o=>o.status==='CONCLUIDA').length,    color: 'text-green-600' },
-          { label: 'Pausadas',      count: ordens.filter(o=>o.status==='PAUSADA').length,      color: 'text-gray-600' },
-        ].map(s => (
-          <div key={s.label} className="card text-center">
-            <p className={`text-2xl font-bold ${s.color}`}>{s.count}</p>
-            <p className="text-xs text-gray-500 mt-1">{s.label}</p>
+        {(['PLANEJADA','EM_ANDAMENTO','CONCLUIDA','PAUSADA'] as const).map(s => (
+          <div key={s} className="card card-hover cursor-pointer" style={{ borderLeft: `3px solid ${STAT_COLORS[s]}` }}
+            onClick={() => setFiltro(filtro === s ? 'TODOS' : s)}>
+            <p className="text-2xl font-black text-white">{ordens.filter(o=>o.status===s).length}</p>
+            <p className="text-xs mt-1" style={{ color: STAT_COLORS[s] }}>{STATUS[s].label}</p>
           </div>
         ))}
       </div>
 
-      {/* Header + Filtros */}
+      {/* Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-1.5 flex-wrap">
           {['TODOS','PLANEJADA','EM_ANDAMENTO','CONCLUIDA','PAUSADA'].map(f => (
-            <button
-              key={f}
-              onClick={() => setFiltro(f)}
-              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${
-                filtro === f
-                  ? 'bg-green-600 text-white'
-                  : 'bg-white text-gray-600 border border-gray-200 hover:border-green-400'
-              }`}
-            >
-              {f === 'TODOS' ? 'Todos' : f.replace('_', ' ')}
+            <button key={f} onClick={() => setFiltro(f)}
+              className="px-3 py-1.5 text-xs font-semibold rounded-lg transition-all"
+              style={filtro===f
+                ? { background: '#F97316', color: '#000' }
+                : { background: '#1C1C1C', color: '#9CA3AF', border: '1px solid #2A2A2A' }}>
+              {f==='TODOS' ? 'Todos' : STATUS[f]?.label ?? f}
             </button>
           ))}
         </div>
-        <button className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors">
-          <Plus size={16} />
-          Nova Ordem
+        <button onClick={() => setModal(true)} className="btn-primary text-xs">
+          <Plus size={14} /> Nova Ordem
         </button>
       </div>
 
       {/* Tabela */}
-      <div className="card overflow-hidden p-0">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-100">
-              <tr>
-                {['Número','Produto','Lote','Qtd. Planejada','Data','Status','Ações'].map(h => (
-                  <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
+      <div className="card overflow-hidden" style={{ padding: 0 }}>
+        {loading ? (
+          <div className="flex justify-center py-12"><div className="spinner" /></div>
+        ) : filtradas.length === 0 ? (
+          <div className="text-center py-16" style={{ color: '#444' }}>
+            <FlaskConical size={36} className="mx-auto mb-3" />
+            <p className="text-sm">Nenhuma ordem encontrada</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="vtable">
+              <thead><tr>
+                {['Número','Produto','Lote','Qtd. Planejada','Data','Status','Alterar Status'].map(h=>(
+                  <th key={h}>{h}</th>
                 ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {filtradas.map(o => {
-                const sc = statusConfig[o.status]
-                return (
-                  <tr key={o.numero} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3 font-mono text-xs font-medium text-green-700">{o.numero}</td>
-                    <td className="px-4 py-3 font-medium text-gray-800">{o.produto}</td>
-                    <td className="px-4 py-3 text-gray-500 font-mono text-xs">{o.lote}</td>
-                    <td className="px-4 py-3 text-gray-700">{o.qtd} {o.unidade}</td>
-                    <td className="px-4 py-3 text-gray-500 text-xs">{new Date(o.data).toLocaleDateString('pt-BR')}</td>
-                    <td className="px-4 py-3">
-                      <span className={sc.badge}>{sc.label}</span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex gap-1">
-                        <button className="p-1.5 hover:bg-green-50 rounded text-green-600" title="Ver detalhes">
-                          <FlaskConical size={15} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
+              </tr></thead>
+              <tbody>
+                {filtradas.map(o => {
+                  const sc = STATUS[o.status] ?? { label: o.status, badge: 'badge-gray' }
+                  return (
+                    <tr key={o.id}>
+                      <td><span className="font-mono text-xs font-bold" style={{ color: '#F97316' }}>{o.numero}</span></td>
+                      <td className="font-semibold text-white">{o.produtos?.nome ?? '—'}</td>
+                      <td><span className="font-mono text-xs" style={{ color: '#6B7280' }}>{o.numero_lote ?? '—'}</span></td>
+                      <td className="text-white">{o.quantidade_planejada} {o.unidade_medida}</td>
+                      <td style={{ color: '#9CA3AF' }}>{o.data_planejada ? new Date(o.data_planejada).toLocaleDateString('pt-BR') : '—'}</td>
+                      <td><span className={sc.badge}>{sc.label}</span></td>
+                      <td>
+                        <select value={o.status} onChange={e => atualizarStatus(o.id, e.target.value)}
+                          className="input text-xs" style={{ width: 'auto', padding: '4px 8px', height: 30 }}>
+                          {Object.entries(STATUS).map(([k,v]) => <option key={k} value={k}>{v.label}</option>)}
+                        </select>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
+
+      {/* Modal */}
+      {modal && (
+        <div className="modal-bg">
+          <div className="modal-box">
+            <div className="flex items-center gap-2 mb-5">
+              <span style={{ width: 3, height: 18, background: '#F97316', borderRadius: 2, display: 'inline-block' }} />
+              <h2 className="text-base font-black text-white">Nova Ordem de Produção</h2>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold mb-1.5" style={{ color: '#9CA3AF' }}>Produto *</label>
+                <select value={form.produto_id} onChange={e => setForm(p=>({...p,produto_id:e.target.value}))} className="input select">
+                  <option value="">Selecione o produto</option>
+                  {produtos.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
+                </select>
+              </div>
+              {[
+                { key: 'quantidade_planejada', label: 'Quantidade Planejada *', type: 'number' },
+                { key: 'unidade_medida', label: 'Unidade (L, kg, un...)', type: 'text' },
+                { key: 'data_planejada', label: 'Data Planejada', type: 'date' },
+                { key: 'numero_lote', label: 'Número do Lote', type: 'text' },
+                { key: 'responsavel', label: 'Responsável', type: 'text' },
+              ].map(f => (
+                <div key={f.key}>
+                  <label className="block text-xs font-semibold mb-1.5" style={{ color: '#9CA3AF' }}>{f.label}</label>
+                  <input type={f.type} value={(form as any)[f.key]} onChange={e => setForm(p=>({...p,[f.key]:e.target.value}))} className="input" />
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2 mt-5">
+              <button onClick={() => setModal(false)} className="btn-ghost flex-1 justify-center">Cancelar</button>
+              <button onClick={salvar} disabled={salvando} className="btn-primary flex-1 justify-center" style={{ opacity: salvando ? .6 : 1 }}>
+                {salvando ? 'Salvando...' : 'Criar Ordem'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

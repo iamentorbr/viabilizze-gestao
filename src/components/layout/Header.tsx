@@ -3,22 +3,44 @@ import { Bell, Search } from 'lucide-react'
 
 export default function Header({ title }: { title: string }) {
   return (
-    <header className="h-16 bg-white border-b border-gray-100 flex items-center justify-between px-6 sticky top-0 z-20">
-      <h1 className="text-lg font-semibold text-gray-800">{title}</h1>
-      <div className="flex items-center gap-3">
+    <header
+      className="h-14 flex items-center justify-between px-6 sticky top-0 z-20"
+      style={{ background: '#111111', borderBottom: '1px solid #1E1E1E' }}
+    >
+      {/* Título com detalhe laranja */}
+      <div className="flex items-center gap-2.5">
+        <span style={{ width: 3, height: 18, background: '#F97316', borderRadius: 2, display: 'inline-block' }} />
+        <h1 className="text-sm font-bold text-white tracking-wide uppercase">{title}</h1>
+      </div>
+
+      <div className="flex items-center gap-2.5">
+        {/* Busca */}
         <div className="relative hidden sm:block">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#6B7280' }} />
           <input
             type="text"
             placeholder="Buscar..."
-            className="pl-9 pr-4 py-1.5 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 w-48"
+            className="input pl-8 text-xs h-8 w-44"
           />
         </div>
-        <button className="relative p-2 hover:bg-gray-100 rounded-lg">
-          <Bell size={18} className="text-gray-500" />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
+
+        {/* Notificação */}
+        <button
+          className="relative w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
+          style={{ background: '#1C1C1C', border: '1px solid #2A2A2A' }}
+        >
+          <Bell size={15} style={{ color: '#9CA3AF' }} />
+          <span
+            className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full"
+            style={{ background: '#F97316' }}
+          />
         </button>
-        <div className="w-8 h-8 rounded-full bg-green-600 flex items-center justify-center text-white text-xs font-bold">
+
+        {/* Avatar */}
+        <div
+          className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black"
+          style={{ background: '#F97316', color: '#000' }}
+        >
           AP
         </div>
       </div>
