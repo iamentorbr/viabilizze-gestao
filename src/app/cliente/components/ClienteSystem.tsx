@@ -189,7 +189,7 @@ export default function ClienteSystem({ clienteId }: { clienteId: string }) {
 
         <div className="px-3 mb-3">
           <div className="px-4 py-3 rounded-xl" style={{ background: '#252931' }}>
-            <p className="text-xs font-bold" style={{ color: '#F97316' }}>VI.P & NÔUS</p>
+            <p className="text-xs font-bold" style={{ color: '#F97316' }}>VIABILIZZE | Assessoria Industrial</p>
             <p className="text-xs mt-0.5" style={{ color: '#5f6875' }}>Assessoria Industrial · v2.0</p>
           </div>
         </div>

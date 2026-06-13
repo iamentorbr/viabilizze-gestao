@@ -218,7 +218,7 @@ export default function ClienteConfiguracoes({
                   Dados Protegidos
                 </h3>
                 <p className="text-xs" style={{ color: '#9aa0a6' }}>
-                  Não editáveis — para alteração, contate a VI.P & NÔUS
+                  Não editáveis — para alteração, contate a VIABILIZZE | Assessoria Industrial
                 </p>
               </div>
             </div>
@@ -490,7 +490,7 @@ export default function ClienteConfiguracoes({
           <div className="alert-info flex items-start gap-2">
             <Info size={13} style={{ color: '#1565c0' }} className="mt-0.5 shrink-0" />
             <p className="text-xs" style={{ color: '#1565c0' }}>
-              Desativar um sabor não exclui seus dados. As rodadas e histórico são mantidos. Para excluir permanentemente, entre em contato com a VI.P & NÔUS.
+              Desativar um sabor não exclui seus dados. As rodadas e histórico são mantidos. Para excluir permanentemente, entre em contato com a VIABILIZZE | Assessoria Industrial.
             </p>
           </div>
         </div>

@@ -95,7 +95,7 @@ export default function DashboardViabilizze() {
             <span className="font-black text-2xl" style={{ color: '#F97316' }}>V</span>
           </div>
           <h2 className="text-lg font-black mb-1" style={{ color: '#1a1d23' }}>
-            VI.P & <span style={{ color: '#F97316' }}>NÔUS</span>
+            VIABILIZZE <span style={{ color: '#F97316' }}>|</span> Assessoria Industrial
           </h2>
           <p className="text-sm mb-2" style={{ color: '#9aa0a6' }}>Assessoria Industrial</p>
 
@@ -118,7 +118,7 @@ export default function DashboardViabilizze() {
             </div>
             <div>
               <p className="text-sm font-bold" style={{ color: '#1a1d23' }}>Acesso Restrito</p>
-              <p className="text-xs" style={{ color: '#9aa0a6' }}>Dashboard VI.P & NÔUS</p>
+              <p className="text-xs" style={{ color: '#9aa0a6' }}>Dashboard VIABILIZZE | Assessoria Industrial</p>
             </div>
           </div>
 
@@ -156,7 +156,7 @@ export default function DashboardViabilizze() {
           </button>
 
           <p className="text-xs text-center mt-3" style={{ color: '#9aa0a6' }}>
-            Para suporte, contate a VI.P & NÔUS Consultoria
+            Para suporte, contate a equipe VIABILIZZE
           </p>
         </div>
       </div>
@@ -183,7 +183,7 @@ export default function DashboardViabilizze() {
               Painel Estratégico
             </span>
           </div>
-          <h1 className="text-xl font-black text-white">VI.P & NÔUS Consultoria</h1>
+          <h1 className="text-xl font-black text-white">VIABILIZZE | Assessoria Industrial</h1>
           <p className="text-xs mt-1" style={{ color: '#9aa0a6' }}>
             Assessoria Industrial · Alimentos & Bebidas
           </p>
