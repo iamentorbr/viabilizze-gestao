@@ -4,13 +4,14 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import {
   LayoutDashboard, Calculator, Layers, ShoppingCart,
-  Clock, FlaskConical, ArrowLeft, Settings, ChevronRight, AlertTriangle
+  Clock, FlaskConical, ArrowLeft, Settings, Settings2, ChevronRight, AlertTriangle
 } from 'lucide-react'
 import ClienteDashboard from './ClienteDashboard'
 import ClienteCalculadora from './ClienteCalculadora'
 import ClienteMateriasPrimas from './ClienteMateriasPrimas'
 import ClienteComprasGestao from './ClienteComprasGestao'
 import ClienteHistorico from './ClienteHistorico'
+import ClienteConfiguracoes from './ClienteConfiguracoes'
 import ClienteFormulacoes from './ClienteFormulacoes'
 
 const SECOES = [
@@ -36,6 +37,10 @@ const SECOES = [
     label: 'Registros',
     items: [{ id: 'historico', label: 'Histórico', icon: Clock, badge: null }],
   },
+  {
+    label: 'Conta',
+    items: [{ id: 'configuracoes', label: 'Configurações', icon: Settings2, badge: null }],
+  },
 ]
 
 const ABA_META: Record<string, { titulo: string; sub: string }> = {
@@ -44,7 +49,8 @@ const ABA_META: Record<string, { titulo: string; sub: string }> = {
   formulacoes: { titulo: 'Formulações',              sub: 'Gerencie as fórmulas por sabor'      },
   materias:    { titulo: 'Matérias-Primas',          sub: 'Controle de estoque de insumos'      },
   compras:     { titulo: 'Compras',                  sub: 'Consolidado e gestão de compras'     },
-  historico:   { titulo: 'Histórico de Produção',    sub: 'Rodadas e movimentações registradas' },
+  historico:       { titulo: 'Histórico de Produção',    sub: 'Rodadas e movimentações registradas' },
+  configuracoes:   { titulo: 'Configurações',              sub: 'Dados cadastrais e configurações do cliente' },
 }
 
 export default function ClienteSystem({ clienteId }: { clienteId: string }) {
@@ -183,7 +189,7 @@ export default function ClienteSystem({ clienteId }: { clienteId: string }) {
 
         <div className="px-3 mb-3">
           <div className="px-4 py-3 rounded-xl" style={{ background: '#252931' }}>
-            <p className="text-xs font-bold" style={{ color: '#F97316' }}>VI.P & NÔUS</p>
+            <p className="text-xs font-bold" style={{ color: '#F97316' }}>VIABILIZZE | Assessoria Industrial</p>
             <p className="text-xs mt-0.5" style={{ color: '#5f6875' }}>Assessoria Industrial · v2.0</p>
           </div>
         </div>
@@ -214,7 +220,8 @@ export default function ClienteSystem({ clienteId }: { clienteId: string }) {
           {aba === 'formulacoes' && <ClienteFormulacoes   clienteId={clienteId} sabores={sabores} onUpdate={setSabores} />}
           {aba === 'materias'    && <ClienteMateriasPrimas clienteId={clienteId} onAlertasUpdate={setAlertas} />}
           {aba === 'compras'     && <ClienteComprasGestao  clienteId={clienteId} sabores={sabores} />}
-          {aba === 'historico'   && <ClienteHistorico      clienteId={clienteId} sabores={sabores} />}
+          {aba === 'historico'       && <ClienteHistorico        clienteId={clienteId} sabores={sabores} />}
+          {aba === 'configuracoes'  && <ClienteConfiguracoes    clienteId={clienteId} onClienteUpdate={(nome: string) => setCliente((prev: any) => prev ? { ...prev, nome } : prev)} />}
         </div>
       </div>
     </div>
