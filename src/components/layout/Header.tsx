@@ -1,26 +1,44 @@
 'use client'
 import { Bell, Search } from 'lucide-react'
 
-export default function Header({ title }: { title: string }) {
+export default function Header({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
-    <header className="h-16 bg-white border-b border-gray-100 flex items-center justify-between px-6 sticky top-0 z-20">
-      <h1 className="text-lg font-semibold text-gray-800">{title}</h1>
-      <div className="flex items-center gap-3">
+    <header
+      className="sticky top-0 z-20 flex items-center justify-between px-6"
+      style={{
+        background: '#f0f2f5',
+        borderBottom: '1px solid #e8eaed',
+        height: 56,
+      }}
+    >
+      <div>
+        <h1 className="text-lg font-bold" style={{ color: '#1a1d23', lineHeight: 1.2 }}>{title}</h1>
+        {subtitle && <p className="text-xs" style={{ color: '#9aa0a6' }}>{subtitle}</p>}
+      </div>
+
+      <div className="flex items-center gap-2">
+        {/* Busca */}
         <div className="relative hidden sm:block">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#9aa0a6' }} />
           <input
             type="text"
             placeholder="Buscar..."
-            className="pl-9 pr-4 py-1.5 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 w-48"
+            className="input pl-8 text-xs"
+            style={{ height: 34, width: 180, background: '#fff', border: '1px solid #dadce0' }}
           />
         </div>
-        <button className="relative p-2 hover:bg-gray-100 rounded-lg">
-          <Bell size={18} className="text-gray-500" />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
+
+        {/* Notificação */}
+        <button
+          className="relative flex items-center justify-center rounded-lg transition-colors"
+          style={{ width: 34, height: 34, background: '#fff', border: '1px solid #dadce0' }}
+        >
+          <Bell size={15} style={{ color: '#5f6368' }} />
+          <span
+            className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full"
+            style={{ background: '#F97316' }}
+          />
         </button>
-        <div className="w-8 h-8 rounded-full bg-green-600 flex items-center justify-center text-white text-xs font-bold">
-          AP
-        </div>
       </div>
     </header>
   )

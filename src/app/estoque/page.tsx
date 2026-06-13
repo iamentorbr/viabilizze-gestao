@@ -5,7 +5,7 @@ import EstoqueClient from './EstoqueClient'
 export default function EstoquePage() {
   return (
     <AppLayout>
-      <Header title="Gestão de Estoque" />
+      <Header title="Matérias-Primas" subtitle="Gestão de materiais e insumos" />
       <EstoqueClient />
     </AppLayout>
   )

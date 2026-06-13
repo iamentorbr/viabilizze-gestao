@@ -8,14 +8,10 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        brand: {
-          orange: '#F97316',
-          'orange-hover': '#EA6A00',
-          dark:   '#111111',
-          mid:    '#1C1C1C',
-          surface:'#242424',
-          border: '#2A2A2A',
-        },
+        sidebar: '#1a1d23',
+        orange: { DEFAULT: '#F97316', hover: '#e86a00' },
+        page: '#f0f2f5',
+        card: '#ffffff',
       },
     },
   },

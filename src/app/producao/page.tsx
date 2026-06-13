@@ -5,7 +5,7 @@ import ProducaoClient from './ProducaoClient'
 export default function ProducaoPage() {
   return (
     <AppLayout>
-      <Header title="Produção de Bebidas" />
+      <Header title="Ordens de Produção" subtitle="Controle do processo produtivo" />
       <ProducaoClient />
     </AppLayout>
   )
