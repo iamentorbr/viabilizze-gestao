@@ -19,6 +19,7 @@ type Props = {
   titulo?: string
   nomeProdutoInicial?: string
   ingredientesIniciais?: Ingrediente[]
+  porcaoInicial?: number
 }
 
 export default function CalculadoraFormulacao({
