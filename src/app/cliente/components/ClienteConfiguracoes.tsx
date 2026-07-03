@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase'
 import {
   Save, Lock, CheckCircle, AlertTriangle, Building2,
   Mail, Phone, MapPin, User, FileText, Power,
-  Edit3, Info, X, Upload, Trash2
+  Edit3, Info, X, Upload, Trash2, Crown, ShieldCheck
 } from 'lucide-react'
 
 type ClienteConfig = {
@@ -54,7 +54,7 @@ export default function ClienteConfiguracoes({
   const [salvando, setSalvando] = useState(false)
   const [saved, setSaved] = useState(false)
   const [erro, setErro] = useState('')
-  const [subAba, setSubAba] = useState<'dados' | 'sabores' | 'status'>('dados')
+  const [subAba, setSubAba] = useState<'dados' | 'sabores' | 'status' | 'produtos'>('dados')
   const [modalSabor, setModalSabor] = useState(false)
   const [saborEdit, setSaborEdit] = useState<Sabor | null>(null)
   const [formSabor, setFormSabor] = useState({
@@ -64,16 +64,23 @@ export default function ClienteConfiguracoes({
   })
   const [salvandoSabor, setSalvandoSabor] = useState(false)
   const [confirmDesativar, setConfirmDesativar] = useState(false)
+  const [produtosVip, setProdutosVip] = useState<any[]>([])
+  const [liberados, setLiberados] = useState<Set<string>>(new Set())
+  const [salvandoProduto, setSalvandoProduto] = useState<string | null>(null)
 
   useEffect(() => {
     async function load() {
-      const [{ data: c }, { data: s }] = await Promise.all([
+      const [{ data: c }, { data: s }, { data: prods }, { data: lib }] = await Promise.all([
         supabase.from('clientes').select('*').eq('id', clienteId).single(),
         supabase.from('cliente_sabores')
           .select('*').eq('cliente_id', clienteId).order('criado_em'),
+        supabase.from('produtos_viabilizze').select('*').eq('ativo', true).order('nome'),
+        supabase.from('cliente_produtos_liberados').select('produto_id').eq('cliente_id', clienteId),
       ])
       if (c) { setCliente(c); setForm(c) }
       setSabores(s ?? [])
+      setProdutosVip(prods ?? [])
+      setLiberados(new Set((lib ?? []).map((l: any) => l.produto_id)))
       setLoading(false)
     }
     load()
@@ -158,6 +165,23 @@ export default function ClienteConfiguracoes({
     setSabores(prev => prev.map(s => s.id === id ? { ...s, ativo: !ativo } : s))
   }
 
+  const toggleLiberacaoProduto = async (produtoId: string) => {
+    setSalvandoProduto(produtoId)
+    const jaLiberado = liberados.has(produtoId)
+
+    if (jaLiberado) {
+      await supabase.from('cliente_produtos_liberados')
+        .delete().eq('cliente_id', clienteId).eq('produto_id', produtoId)
+      setLiberados(prev => { const s = new Set(prev); s.delete(produtoId); return s })
+    } else {
+      await supabase.from('cliente_produtos_liberados').insert({
+        cliente_id: clienteId, produto_id: produtoId, liberado_por: 'VIABILIZZE',
+      })
+      setLiberados(prev => new Set(prev).add(produtoId))
+    }
+    setSalvandoProduto(null)
+  }
+
   const desativarCliente = async () => {
     await supabase.from('clientes').update({ ativo: false }).eq('id', clienteId)
     setCliente(prev => prev ? { ...prev, ativo: false } : prev)
@@ -188,9 +212,10 @@ export default function ClienteConfiguracoes({
       <div className="flex gap-0 rounded-xl overflow-hidden"
         style={{ border: '1px solid #e8eaed', background: '#fff', width: 'fit-content' }}>
         {([
-          { id: 'dados',   label: 'Dados Cadastrais', icon: Building2 },
-          { id: 'sabores', label: 'Sabores / Produtos', icon: FileText },
-          { id: 'status',  label: 'Status da Conta',  icon: Power },
+          { id: 'dados',    label: 'Dados Cadastrais', icon: Building2 },
+          { id: 'sabores',  label: 'Sabores / Produtos', icon: FileText },
+          { id: 'produtos', label: 'Produtos VIABILIZZE', icon: Crown },
+          { id: 'status',   label: 'Status da Conta',  icon: Power },
         ] as const).map(sub => (
           <button key={sub.id} onClick={() => setSubAba(sub.id)}
             className="flex items-center gap-2 px-5 py-2.5 text-xs font-semibold transition-all"
@@ -218,7 +243,7 @@ export default function ClienteConfiguracoes({
                   Dados Protegidos
                 </h3>
                 <p className="text-xs" style={{ color: '#9aa0a6' }}>
-                  Não editáveis — para alteração, contate a VIABILIZZE | Assessoria Industrial
+                  Não editáveis — para alteração, contate a equipe VIABILIZZE
                 </p>
               </div>
             </div>
@@ -490,7 +515,7 @@ export default function ClienteConfiguracoes({
           <div className="alert-info flex items-start gap-2">
             <Info size={13} style={{ color: '#1565c0' }} className="mt-0.5 shrink-0" />
             <p className="text-xs" style={{ color: '#1565c0' }}>
-              Desativar um sabor não exclui seus dados. As rodadas e histórico são mantidos. Para excluir permanentemente, entre em contato com a VIABILIZZE | Assessoria Industrial.
+              Desativar um sabor não exclui seus dados. As rodadas e histórico são mantidos. Para excluir permanentemente, entre em contato com a equipe VIABILIZZE.
             </p>
           </div>
         </div>
@@ -602,6 +627,96 @@ export default function ClienteConfiguracoes({
               </button>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ══ ABA: PRODUTOS VIABILIZZE ═════════════════════════════════════════ */}
+      {subAba === 'produtos' && (
+        <div className="space-y-4">
+          <div className="card" style={{ borderLeft: '4px solid #F97316' }}>
+            <div className="flex items-start gap-3 mb-2">
+              <div className="stat-icon" style={{ background: '#fff3e0', width: 32, height: 32, borderRadius: 8 }}>
+                <Crown size={14} style={{ color: '#F97316' }} />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold" style={{ color: '#1a1d23' }}>
+                  Liberação de Produtos Premium
+                </h3>
+                <p className="text-xs mt-0.5" style={{ color: '#9aa0a6' }}>
+                  Conceda acesso gratuito aos produtos VIABILIZZE para este cliente. Quando liberado,
+                  o cliente acessa o produto sem necessidade de pagamento via Stripe.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {produtosVip.length === 0 ? (
+            <div className="card text-center py-10" style={{ color: '#9aa0a6' }}>
+              <Crown size={32} className="mx-auto mb-2 opacity-30" />
+              <p className="text-sm">Nenhum produto VIABILIZZE cadastrado ainda.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {produtosVip.map((p: any) => {
+                const isLiberado = liberados.has(p.id)
+                const salvando = salvandoProduto === p.id
+                return (
+                  <div key={p.id} className="card"
+                    style={{ borderLeft: `4px solid ${isLiberado ? '#22c55e' : '#e8eaed'}` }}>
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-start gap-3 flex-1">
+                        <div className="stat-icon" style={{
+                          background: isLiberado ? '#e8f5e9' : '#f5f5f5',
+                          width: 38, height: 38, borderRadius: 10
+                        }}>
+                          {isLiberado
+                            ? <ShieldCheck size={18} style={{ color: '#2e7d32' }} />
+                            : <Lock size={16} style={{ color: '#9aa0a6' }} />}
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold" style={{ color: '#1a1d23' }}>{p.nome}</p>
+                          <p className="text-xs mt-0.5" style={{ color: '#5f6368' }}>{p.descricao}</p>
+                          <p className="text-xs mt-1.5 font-semibold" style={{ color: '#F97316' }}>
+                            R$ {Number(p.preco_mensal).toFixed(2).replace('.', ',')}/mês — Semestral ou Anual
+                          </p>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => toggleLiberacaoProduto(p.id)}
+                        disabled={salvando}
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold shrink-0 transition-all"
+                        style={isLiberado
+                          ? { background: '#fce4ec', color: '#c62828', border: '1px solid #f48fb1' }
+                          : { background: '#e8f5e9', color: '#2e7d32', border: '1px solid #a5d6a7' }}
+                      >
+                        {salvando ? '...' : isLiberado
+                          ? <><Lock size={13} /> Revogar Acesso</>
+                          : <><ShieldCheck size={13} /> Liberar Gratuitamente</>}
+                      </button>
+                    </div>
+
+                    {isLiberado && (
+                      <div className="mt-3 pt-3 flex items-center gap-2" style={{ borderTop: '1px solid #f0f2f5' }}>
+                        <CheckCircle size={12} style={{ color: '#2e7d32' }} />
+                        <p className="text-xs" style={{ color: '#2e7d32' }}>
+                          Este cliente tem acesso gratuito e ilimitado a este produto.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
+          <div className="alert-info flex items-start gap-2">
+            <Info size={13} style={{ color: '#1565c0' }} className="mt-0.5 shrink-0" />
+            <p className="text-xs" style={{ color: '#1565c0' }}>
+              Clientes sem liberação podem comprar o acesso diretamente via Stripe na tela do produto —
+              plano Semestral ou Anual, sem descontos, R$ 249,00/mês.
+            </p>
+          </div>
         </div>
       )}
 

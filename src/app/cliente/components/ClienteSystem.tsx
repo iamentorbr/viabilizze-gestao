@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase'
 import {
   LayoutDashboard, Calculator, Layers, ShoppingCart,
   Clock, FlaskConical, ArrowLeft, Settings, Settings2, ChevronRight, AlertTriangle,
-  Beaker, Package, CheckCircle, TrendingUp, ArrowRight, Truck, BarChart2, Tag
+  Beaker, Package, CheckCircle, TrendingUp, ArrowRight, Truck, BarChart2, Tag, Crown
 } from 'lucide-react'
 import ClienteCalculadora from './ClienteCalculadora'
 import ClienteMateriasPrimas from './ClienteMateriasPrimas'
@@ -14,6 +14,7 @@ import ClienteHistorico from './ClienteHistorico'
 import ClienteConfiguracoes from './ClienteConfiguracoes'
 import ClienteFormulacoes from './ClienteFormulacoes'
 import ClienteRotulagem from './ClienteRotulagem'
+import CalculadoraViabilizze from '@/components/CalculadoraViabilizze'
 
 // ─── DASHBOARD DO CLIENTE (inline — sem arquivo externo) ─────────────────────
 
@@ -351,6 +352,7 @@ const SECOES = [
     { id: 'compras',  label: 'Compras',          icon: ShoppingCart, badge: null },
   ]},
   { label: 'Rotulagem', items: [{ id: 'rotulagem', label: 'Tabela Nutricional', icon: Tag, badge: null }] },
+  { label: 'Produtos VIABILIZZE', items: [{ id: 'calc-viabilizze', label: 'Calculadora VIABILIZZE', icon: Crown, badge: null }] },
   { label: 'Registros', items: [{ id: 'historico', label: 'Histórico', icon: Clock, badge: null }] },
   { label: 'Conta',     items: [{ id: 'configuracoes', label: 'Configurações', icon: Settings2, badge: null }] },
 ]
@@ -363,6 +365,7 @@ const ABA_META: Record<string, { titulo: string; sub: string }> = {
   compras:       { titulo: 'Compras',                  sub: 'Consolidado e gestão de compras'           },
   historico:     { titulo: 'Histórico de Produção',    sub: 'Rodadas e movimentações registradas'       },
   rotulagem:     { titulo: 'Tabela Nutricional',        sub: 'Rotulagem nutricional — IN 75/2020 ANVISA · RDC 429/2020' },
+  'calc-viabilizze': { titulo: 'Calculadora VIABILIZZE', sub: 'Percentual de polpa/suco — Legislação MAPA IN 49/2018' },
   configuracoes: { titulo: 'Configurações',            sub: 'Dados cadastrais e configurações do cliente' },
 }
 
@@ -530,6 +533,7 @@ export default function ClienteSystem({ clienteId }: { clienteId: string }) {
           {aba === 'compras'       && <ClienteComprasGestao  clienteId={clienteId} sabores={sabores} />}
           {aba === 'historico'     && <ClienteHistorico      clienteId={clienteId} sabores={sabores} />}
           {aba === 'rotulagem'     && <ClienteRotulagem      clienteId={clienteId} sabores={sabores} />}
+          {aba === 'calc-viabilizze' && <div className="p-6"><CalculadoraViabilizze clienteId={clienteId} /></div>}
           {aba === 'configuracoes' && <ClienteConfiguracoes  clienteId={clienteId} onClienteUpdate={(nome: string) => setCliente((prev: any) => prev ? { ...prev, nome } : prev)} />}
         </div>
       </div>

@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Users, FlaskConical, Package,
   ShoppingCart, Tag, FolderKanban, BarChart3,
-  ChevronRight, Settings, Calculator, ClipboardList, ShieldCheck
+  ChevronRight, Settings, Calculator, ClipboardList, ShieldCheck, Crown
 } from 'lucide-react'
 
 const sections = [
@@ -44,6 +44,12 @@ const sections = [
     label: 'Rotulagem',
     items: [
       { href: '/rotulagem',    label: 'Tabela Nutricional',  icon: Tag },
+    ],
+  },
+  {
+    label: 'Produtos VIABILIZZE',
+    items: [
+      { href: '/produtos/calculadora-viabilizze', label: 'Calculadora VIABILIZZE', icon: Crown },
     ],
   },
   {
